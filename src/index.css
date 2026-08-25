@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: light;
+  }
+  .dark {
+    color-scheme: dark;
+  }
+
+  html, body, #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-paper text-ink antialiased;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  .dark body {
+    @apply bg-ink text-paper;
+  }
+
+  /* Visible keyboard focus everywhere — not just on click */
+  :focus-visible {
+    outline: 2px solid theme('colors.signal.500');
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *, *::before, *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* The signature element: a physical hang-tag styled chip for Sample IDs,
+     used consistently across list rows, cards, and the detail page —
+     a direct visual echo of the printed QR label on the real object. */
+  .id-tag {
+    @apply inline-flex items-center gap-1.5 rounded-md border border-dashed
+           border-ink/20 dark:border-paper/25 bg-paper-soft dark:bg-ink-elevated
+           px-2 py-1 font-mono text-xs font-medium tracking-tight
+           text-ink/80 dark:text-paper/80;
+  }
+
+  .card {
+    @apply rounded-xl border border-ink/8 dark:border-paper/10
+           bg-paper-soft dark:bg-ink-soft shadow-card dark:shadow-card-dark;
+  }
+
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 rounded-lg px-3.5 py-2
+           text-sm font-medium transition-colors duration-150
+           disabled:opacity-50 disabled:pointer-events-none;
+  }
+  .btn-primary {
+    @apply btn bg-signal-500 text-white hover:bg-signal-600;
+  }
+  .btn-secondary {
+    @apply btn border border-ink/12 dark:border-paper/15 text-ink dark:text-paper
+           hover:bg-ink/5 dark:hover:bg-paper/5;
+  }
+  .btn-danger {
+    @apply btn bg-red-500 text-white hover:bg-red-600;
+  }
+  .btn-ghost {
+    @apply btn text-ink/70 dark:text-paper/70 hover:bg-ink/5 dark:hover:bg-paper/5;
+  }
+
+  .input {
+    @apply w-full rounded-lg border border-ink/12 dark:border-paper/15
+           bg-paper-soft dark:bg-ink-elevated px-3 py-2 text-sm
+           placeholder:text-ink/40 dark:placeholder:text-paper/40
+           focus:border-signal-500 outline-none transition-colors;
+  }
+
+  .label {
+    @apply mb-1.5 block text-xs font-semibold uppercase tracking-wide text-ink/55 dark:text-paper/55;
+  }
+
+  .badge {
+    @apply inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium;
+  }
+}
