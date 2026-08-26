@@ -12,7 +12,7 @@
 import QRCode from "npm:qrcode@1.5.3";
 import { createClient } from "npm:@supabase/supabase-js@2";
 
-const PUBLIC_APP_URL = Deno.env.get("PUBLIC_APP_URL") ?? "http://localhost:5173";
+const PUBLIC_APP_URL = Deno.env.get("PUBLIC_APP_URL") ?? "https://inventory-app-management-two.vercel.app";
 
 Deno.serve(async (req) => {
   try {
