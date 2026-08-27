@@ -19,11 +19,36 @@ export interface Supplier {
   updated_at: string;
 }
 
+export interface Category {
+  id: string;
+  name: string;
+  description: string | null;
+  status: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface ProductImage {
+  id: string;
+  product_id: string;
+  storage_path: string;
+  public_url: string | null;
+  file_name: string | null;
+  sort_order: number;
+  created_at: string;
+}
+
 export interface Product {
   id: string;
   sample_id: string;
   product_name: string;
+
+  // Legacy field. Kept for backward compatibility.
   category: string | null;
+
+  // New category relation.
+  category_id: string | null;
+
   european_reference: string | null;
   description: string | null;
   qr_image_url: string | null;
@@ -49,6 +74,7 @@ export interface ProductSupplierLink {
 
 export interface ProductWithSuppliers extends Product {
   product_suppliers: ProductSupplierLink[];
+  product_images?: ProductImage[];
 }
 
 export interface DashboardStats {

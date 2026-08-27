@@ -1,11 +1,35 @@
 import { supabase } from "@/lib/supabase";
-import type { DashboardStats, Product, ProductWithSuppliers, Supplier } from "@/types";
+import type {
+  Category,
+  DashboardStats,
+  Product,
+  ProductImage,
+  ProductWithSuppliers,
+  Supplier,
+} from "@/types";
 
 const PRODUCT_WITH_SUPPLIERS_SELECT = `
   *,
   product_suppliers (
-    id, supplier_id, supplier_part_number, price_quoted, currency, moq, lead_time_days, notes, created_at,
+    id,
+    supplier_id,
+    supplier_part_number,
+    price_quoted,
+    currency,
+    moq,
+    lead_time_days,
+    notes,
+    created_at,
     supplier:suppliers ( * )
+  ),
+  product_images (
+    id,
+    product_id,
+    storage_path,
+    public_url,
+    file_name,
+    sort_order,
+    created_at
   )
 `;
 
@@ -22,11 +46,6 @@ export interface PagedResult<T> {
   count: number;
 }
 
-/**
- * Fetches products with pagination, search, and filters.
- * Search matches product_name, sample_id, european_reference, and — via the
- * linked product_suppliers/suppliers join — supplier company name.
- */
 export async function fetchProducts(
   filters: ProductFilters,
   page: number,
@@ -38,16 +57,20 @@ export async function fetchProducts(
     .order("created_at", { ascending: false });
 
   if (filters.category) {
-    query = query.eq("category", filters.category);
+    query = query.eq("category_id", filters.category);
   }
+
   if (filters.createdFrom) {
     query = query.gte("created_at", filters.createdFrom);
   }
+
   if (filters.createdTo) {
     query = query.lte("created_at", filters.createdTo);
   }
+
   if (filters.search) {
     const term = filters.search.trim();
+
     query = query.or(
       `product_name.ilike.%${term}%,sample_id.ilike.%${term}%,european_reference.ilike.%${term}%`
     );
@@ -55,65 +78,88 @@ export async function fetchProducts(
 
   const from = (page - 1) * pageSize;
   const to = from + pageSize - 1;
+
   query = query.range(from, to);
 
   const { data, error, count } = await query;
+
   if (error) throw error;
 
   let rows = (data ?? []) as unknown as ProductWithSuppliers[];
 
-  // Supplier-name search and supplier-id filter both require checking the joined
-  // relation, which PostgREST's .or() can't reach through a nested relationship —
-  // applied client-side here for correctness; for large catalogs this is better
-  // moved into a Postgres RPC/view that does the join server-side.
   if (filters.supplierId) {
     rows = rows.filter((p) =>
-      p.product_suppliers?.some((ps) => ps.supplier_id === filters.supplierId)
+      p.product_suppliers?.some(
+        (ps) => ps.supplier_id === filters.supplierId
+      )
     );
   }
+
   if (filters.search) {
     const term = filters.search.trim().toLowerCase();
     const alreadyMatched = new Set(rows.map((r) => r.id));
+
     const { data: bySupplier } = await supabase
       .from("products")
       .select(PRODUCT_WITH_SUPPLIERS_SELECT)
       .order("created_at", { ascending: false });
-    (bySupplier as unknown as ProductWithSuppliers[] | null)?.forEach((p) => {
-      const matches = p.product_suppliers?.some((ps) =>
-        ps.supplier?.company_name?.toLowerCase().includes(term)
-      );
-      if (matches && !alreadyMatched.has(p.id)) {
-        rows.push(p);
+
+    (bySupplier as unknown as ProductWithSuppliers[] | null)?.forEach(
+      (p) => {
+        const matches = p.product_suppliers?.some((ps) =>
+          ps.supplier?.company_name?.toLowerCase().includes(term)
+        );
+
+        if (matches && !alreadyMatched.has(p.id)) {
+          rows.push(p);
+        }
       }
-    });
+    );
   }
 
-  return { data: rows, count: count ?? rows.length };
+  return {
+    data: rows,
+    count: count ?? rows.length,
+  };
 }
 
-export async function fetchProductBySampleId(sampleId: string): Promise<ProductWithSuppliers | null> {
+export async function fetchProductBySampleId(
+  sampleId: string
+): Promise<ProductWithSuppliers | null> {
   const { data, error } = await supabase
     .from("products")
     .select(PRODUCT_WITH_SUPPLIERS_SELECT)
     .eq("sample_id", sampleId)
     .maybeSingle();
+
   if (error) throw error;
+
   return data as unknown as ProductWithSuppliers | null;
 }
 
-export async function fetchProductById(id: string): Promise<ProductWithSuppliers | null> {
+export async function fetchProductById(
+  id: string
+): Promise<ProductWithSuppliers | null> {
   const { data, error } = await supabase
     .from("products")
     .select(PRODUCT_WITH_SUPPLIERS_SELECT)
     .eq("id", id)
     .maybeSingle();
+
   if (error) throw error;
+
   return data as unknown as ProductWithSuppliers | null;
 }
 
 export interface ProductInput {
   product_name: string;
+
+  // Keep this because the existing application/database uses it.
   category: string;
+
+  // New normalized category.
+  category_id?: string | null;
+
   european_reference: string;
   description: string;
 }
@@ -137,11 +183,19 @@ export async function createProduct(
     .insert(input)
     .select()
     .single();
+
   if (error) throw error;
 
   if (supplierLinks.length > 0) {
-    const rows = supplierLinks.map((link) => ({ ...link, product_id: product.id }));
-    const { error: linkError } = await supabase.from("product_suppliers").insert(rows);
+    const rows = supplierLinks.map((link) => ({
+      ...link,
+      product_id: product.id,
+    }));
+
+    const { error: linkError } = await supabase
+      .from("product_suppliers")
+      .insert(rows);
+
     if (linkError) throw linkError;
   }
 
@@ -153,30 +207,71 @@ export async function updateProduct(
   input: ProductInput,
   supplierLinks: SupplierLinkInput[]
 ): Promise<void> {
-  const { error } = await supabase.from("products").update(input).eq("id", id);
+  const { error } = await supabase
+    .from("products")
+    .update(input)
+    .eq("id", id);
+
   if (error) throw error;
 
-  // Simplest correct approach for a moderate number of links per product:
-  // replace the full set rather than diffing. Fine at this scale; revisit
-  // with an upsert-by-key diff if link counts grow very large.
-  const { error: deleteError } = await supabase.from("product_suppliers").delete().eq("product_id", id);
+  const { error: deleteError } = await supabase
+    .from("product_suppliers")
+    .delete()
+    .eq("product_id", id);
+
   if (deleteError) throw deleteError;
 
   if (supplierLinks.length > 0) {
-    const rows = supplierLinks.map((link) => ({ ...link, product_id: id }));
-    const { error: insertError } = await supabase.from("product_suppliers").insert(rows);
+    const rows = supplierLinks.map((link) => ({
+      ...link,
+      product_id: id,
+    }));
+
+    const { error: insertError } = await supabase
+      .from("product_suppliers")
+      .insert(rows);
+
     if (insertError) throw insertError;
   }
 }
 
 export async function deleteProduct(id: string): Promise<void> {
-  const { error } = await supabase.from("products").delete().eq("id", id);
+  // Remove files from Storage first.
+  const { data: images, error: imageError } = await supabase
+    .from("product_images")
+    .select("storage_path")
+    .eq("product_id", id);
+
+  if (imageError) throw imageError;
+
+  const paths = (images ?? [])
+    .map((image) => image.storage_path)
+    .filter(Boolean);
+
+  if (paths.length > 0) {
+    const { error: storageError } = await supabase.storage
+      .from("product-images")
+      .remove(paths);
+
+    if (storageError) throw storageError;
+  }
+
+  const { error } = await supabase
+    .from("products")
+    .delete()
+    .eq("id", id);
+
   if (error) throw error;
 }
 
 export async function fetchAllSuppliers(): Promise<Supplier[]> {
-  const { data, error } = await supabase.from("suppliers").select("*").order("company_name");
+  const { data, error } = await supabase
+    .from("suppliers")
+    .select("*")
+    .order("company_name");
+
   if (error) throw error;
+
   return data as Supplier[];
 }
 
@@ -191,27 +286,208 @@ export interface SupplierInput {
   category?: string;
 }
 
-export async function createSupplier(input: SupplierInput): Promise<Supplier> {
-  const { data, error } = await supabase.from("suppliers").insert(input).select().single();
+export async function createSupplier(
+  input: SupplierInput
+): Promise<Supplier> {
+  const { data, error } = await supabase
+    .from("suppliers")
+    .insert(input)
+    .select()
+    .single();
+
   if (error) throw error;
+
   return data as Supplier;
 }
 
-export async function fetchDistinctCategories(): Promise<string[]> {
-  const { data, error } = await supabase.from("products").select("category").not("category", "is", null);
+
+/* ============================================================
+   CATEGORIES
+   ============================================================ */
+
+export async function fetchAllCategories(): Promise<Category[]> {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("*")
+    .eq("status", "active")
+    .order("name");
+
   if (error) throw error;
-  const set = new Set((data ?? []).map((r) => r.category as string).filter(Boolean));
-  return Array.from(set).sort();
+
+  return data as Category[];
 }
 
+export async function createCategory(input: {
+  name: string;
+  description?: string;
+}): Promise<Category> {
+  const name = input.name.trim();
+
+  if (!name) {
+    throw new Error("Category name is required.");
+  }
+
+  const { data, error } = await supabase
+    .from("categories")
+    .insert({
+      name,
+      description: input.description?.trim() || null,
+    })
+    .select()
+    .single();
+
+  if (error) throw error;
+
+  return data as Category;
+}
+
+export async function fetchDistinctCategories(): Promise<string[]> {
+  const { data, error } = await supabase
+    .from("categories")
+    .select("name")
+    .eq("status", "active")
+    .order("name");
+
+  if (error) throw error;
+
+  return (data ?? [])
+    .map((row) => row.name)
+    .filter(Boolean);
+}
+
+
+/* ============================================================
+   PRODUCT IMAGES
+   ============================================================ */
+
+export async function fetchProductImages(
+  productId: string
+): Promise<ProductImage[]> {
+  const { data, error } = await supabase
+    .from("product_images")
+    .select("*")
+    .eq("product_id", productId)
+    .order("sort_order", { ascending: true })
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+
+  return data as ProductImage[];
+}
+
+export async function uploadProductImage(
+  productId: string,
+  file: File,
+  sortOrder = 0
+): Promise<ProductImage> {
+  const extension =
+    file.name.split(".").pop()?.toLowerCase() || "jpg";
+
+  const safeName =
+    file.name
+      .replace(/\.[^/.]+$/, "")
+      .replace(/[^a-zA-Z0-9-_]/g, "-")
+      .slice(0, 80) || "image";
+
+  const uniqueName = `${Date.now()}-${crypto.randomUUID()}-${safeName}.${extension}`;
+
+  const storagePath = `${productId}/${uniqueName}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("product-images")
+    .upload(storagePath, file, {
+      cacheControl: "3600",
+      upsert: false,
+      contentType: file.type || undefined,
+    });
+
+  if (uploadError) throw uploadError;
+
+  const {
+    data: { publicUrl },
+  } = supabase.storage
+    .from("product-images")
+    .getPublicUrl(storagePath);
+
+  const { data, error } = await supabase
+    .from("product_images")
+    .insert({
+      product_id: productId,
+      storage_path: storagePath,
+      public_url: publicUrl,
+      file_name: file.name,
+      sort_order: sortOrder,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    await supabase.storage
+      .from("product-images")
+      .remove([storagePath]);
+
+    throw error;
+  }
+
+  return data as ProductImage;
+}
+
+export async function deleteProductImage(
+  image: ProductImage
+): Promise<void> {
+  const { error: storageError } = await supabase.storage
+    .from("product-images")
+    .remove([image.storage_path]);
+
+  if (storageError) throw storageError;
+
+  const { error } = await supabase
+    .from("product_images")
+    .delete()
+    .eq("id", image.id);
+
+  if (error) throw error;
+}
+
+export async function updateProductImageOrder(
+  imageId: string,
+  sortOrder: number
+): Promise<void> {
+  const { error } = await supabase
+    .from("product_images")
+    .update({ sort_order: sortOrder })
+    .eq("id", imageId);
+
+  if (error) throw error;
+}
+
+
+/* ============================================================
+   DASHBOARD
+   ============================================================ */
+
 export async function fetchDashboardStats(): Promise<DashboardStats> {
-  const [{ count: totalProducts }, { count: suppliersCount }, { count: qrGeneratedCount }, categories] =
-    await Promise.all([
-      supabase.from("products").select("*", { count: "exact", head: true }),
-      supabase.from("suppliers").select("*", { count: "exact", head: true }),
-      supabase.from("products").select("*", { count: "exact", head: true }).not("qr_image_url", "is", null),
-      fetchDistinctCategories(),
-    ]);
+  const [
+    { count: totalProducts },
+    { count: suppliersCount },
+    { count: qrGeneratedCount },
+    categories,
+  ] = await Promise.all([
+    supabase
+      .from("products")
+      .select("*", { count: "exact", head: true }),
+
+    supabase
+      .from("suppliers")
+      .select("*", { count: "exact", head: true }),
+
+    supabase
+      .from("products")
+      .select("*", { count: "exact", head: true })
+      .not("qr_image_url", "is", null),
+
+    fetchDistinctCategories(),
+  ]);
 
   return {
     totalProducts: totalProducts ?? 0,
@@ -221,21 +497,36 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   };
 }
 
-export async function fetchRecentProducts(limit = 5): Promise<ProductWithSuppliers[]> {
+export async function fetchRecentProducts(
+  limit = 5
+): Promise<ProductWithSuppliers[]> {
   const { data, error } = await supabase
     .from("products")
     .select(PRODUCT_WITH_SUPPLIERS_SELECT)
     .order("created_at", { ascending: false })
     .limit(limit);
+
   if (error) throw error;
+
   return data as unknown as ProductWithSuppliers[];
 }
 
-/** Calls the generate-qr Edge Function for a given product. */
-export async function generateQrForProduct(productId: string): Promise<{ qr_image_url: string }> {
-  const { data, error } = await supabase.functions.invoke("generate-qr", {
-    body: { product_id: productId },
-  });
+
+/* ============================================================
+   QR
+   ============================================================ */
+
+export async function generateQrForProduct(
+  productId: string
+): Promise<{ qr_image_url: string }> {
+  const { data, error } = await supabase.functions.invoke(
+    "generate-qr",
+    {
+      body: { product_id: productId },
+    }
+  );
+
   if (error) throw error;
+
   return data as { qr_image_url: string };
 }

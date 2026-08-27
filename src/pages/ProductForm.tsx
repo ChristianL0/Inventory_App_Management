@@ -3,37 +3,70 @@ import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
 import {
   createProduct,
+  fetchAllCategories,
   fetchAllSuppliers,
   fetchProductById,
   generateQrForProduct,
   updateProduct,
+  uploadProductImage,
   type SupplierLinkInput,
 } from "@/lib/api";
-import type { Supplier } from "@/types";
+import type { Category, Supplier } from "@/types";
 import { SupplierPicker } from "@/components/SupplierPicker";
+import { CategoryPicker } from "@/components/CategoryPicker";
+import { ProductImageManager } from "@/components/ProductImageManager";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { useToast } from "@/contexts/ToastContext";
 
-const emptyForm = { product_name: "", category: "", european_reference: "", description: "" };
+const emptyForm = {
+  product_name: "",
+  category: "",
+  category_id: null as string | null,
+  european_reference: "",
+  description: "",
+};
 
 export function ProductForm() {
   const { id } = useParams();
   const isEdit = Boolean(id);
+
   const navigate = useNavigate();
   const { notify } = useToast();
 
   const [form, setForm] = useState(emptyForm);
+
   const [links, setLinks] = useState<SupplierLinkInput[]>([]);
+
   const [allSuppliers, setAllSuppliers] = useState<Supplier[]>([]);
+  const [categories, setCategories] = useState<Category[]>([]);
+
+  const [pendingImages, setPendingImages] = useState<File[]>([]);
+
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    fetchAllSuppliers().then(setAllSuppliers).catch(() => {});
-  }, []);
+    Promise.all([
+      fetchAllSuppliers(),
+      fetchAllCategories(),
+    ])
+      .then(([suppliers, loadedCategories]) => {
+        setAllSuppliers(suppliers);
+        setCategories(loadedCategories);
+      })
+      .catch((err) =>
+        notify(
+          "error",
+          err instanceof Error
+            ? err.message
+            : "Could not load form data."
+        )
+      );
+  }, [notify]);
 
   useEffect(() => {
     if (!id) return;
+
     fetchProductById(id)
       .then((product) => {
         if (!product) {
@@ -41,16 +74,20 @@ export function ProductForm() {
           navigate("/products");
           return;
         }
+
         setForm({
           product_name: product.product_name,
           category: product.category ?? "",
+          category_id: product.category_id ?? null,
           european_reference: product.european_reference ?? "",
           description: product.description ?? "",
         });
+
         setLinks(
           (product.product_suppliers ?? []).map((ps) => ({
             supplier_id: ps.supplier_id,
-            supplier_part_number: ps.supplier_part_number ?? undefined,
+            supplier_part_number:
+              ps.supplier_part_number ?? undefined,
             price_quoted: ps.price_quoted,
             currency: ps.currency ?? undefined,
             moq: ps.moq,
@@ -59,34 +96,115 @@ export function ProductForm() {
           }))
         );
       })
-      .catch((err) => notify("error", err instanceof Error ? err.message : "Could not load product."))
+      .catch((err) =>
+        notify(
+          "error",
+          err instanceof Error
+            ? err.message
+            : "Could not load product."
+        )
+      )
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, navigate, notify]);
+
+  function handleCategoryChange(category: Category | null) {
+    setForm((previous) => ({
+      ...previous,
+
+      category_id: category?.id ?? null,
+
+      // Keep the legacy field synchronized.
+      category: category?.name ?? "",
+    }));
+  }
+
+  async function uploadImagesForNewProduct(productId: string) {
+    if (pendingImages.length === 0) return;
+
+    for (let index = 0; index < pendingImages.length; index++) {
+      await uploadProductImage(
+        productId,
+        pendingImages[index],
+        index
+      );
+    }
+
+    setPendingImages([]);
+  }
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
+
     if (!form.product_name.trim()) {
       notify("error", "Product name is required.");
       return;
     }
+
     setSaving(true);
+
     try {
+      const productInput = {
+        product_name: form.product_name.trim(),
+        category: form.category.trim(),
+        category_id: form.category_id,
+        european_reference: form.european_reference.trim(),
+        description: form.description.trim(),
+      };
+
       if (isEdit && id) {
-        await updateProduct(id, form, links);
+        await updateProduct(id, productInput, links);
+
+        if (pendingImages.length > 0) {
+          await uploadImagesForNewProduct(id);
+        }
+
         notify("success", "Product updated.");
         navigate(`/products/${id}`);
       } else {
-        const product = await createProduct(form, links);
-        notify("success", `Product ${product.sample_id} created. Generating QR code…`);
+        const product = await createProduct(
+          productInput,
+          links
+        );
+
+        notify(
+          "success",
+          `Product ${product.sample_id} created.`
+        );
+
+        if (pendingImages.length > 0) {
+          try {
+            await uploadImagesForNewProduct(product.id);
+          } catch {
+            notify(
+              "error",
+              "Product was created, but one or more pictures could not be uploaded."
+            );
+          }
+        }
+
+        notify(
+          "success",
+          "Generating QR code…"
+        );
+
         try {
           await generateQrForProduct(product.id);
         } catch {
-          notify("error", "Product saved, but QR generation failed — you can retry from the product page.");
+          notify(
+            "error",
+            "Product saved, but QR generation failed — you can retry from the product page."
+          );
         }
+
         navigate(`/products/${product.id}`);
       }
     } catch (err) {
-      notify("error", err instanceof Error ? err.message : "Could not save product.");
+      notify(
+        "error",
+        err instanceof Error
+          ? err.message
+          : "Could not save product."
+      );
     } finally {
       setSaving(false);
     }
@@ -94,19 +212,30 @@ export function ProductForm() {
 
   if (loading) return <PageSpinner />;
 
+  const selectedCategory =
+    categories.find(
+      (category) => category.id === form.category_id
+    ) ?? null;
+
   return (
     <div className="mx-auto max-w-2xl space-y-5">
-      <button onClick={() => navigate(-1)} className="btn-ghost !px-2 text-sm">
-        <ArrowLeft size={15} /> Back
+      <button
+        onClick={() => navigate(-1)}
+        className="btn-ghost !px-2 text-sm"
+      >
+        <ArrowLeft size={15} />
+        Back
       </button>
 
       <div>
         <h1 className="text-2xl font-bold tracking-tight text-ink dark:text-paper">
           {isEdit ? "Edit product" : "Add product"}
         </h1>
+
         {!isEdit && (
           <p className="text-sm text-ink/55 dark:text-paper/55">
-            A sample ID and QR code will be generated automatically once you save.
+            A sample ID and QR code will be generated automatically once you
+            save.
           </p>
         )}
       </div>
@@ -114,62 +243,136 @@ export function ProductForm() {
       <form onSubmit={handleSubmit} className="space-y-5">
         <div className="card space-y-4 p-5">
           <div>
-            <label className="label" htmlFor="product_name">Product name *</label>
+            <label
+              className="label"
+              htmlFor="product_name"
+            >
+              Product name *
+            </label>
+
             <input
               id="product_name"
               className="input"
               required
               value={form.product_name}
-              onChange={(e) => setForm({ ...form, product_name: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  product_name: e.target.value,
+                })
+              }
             />
           </div>
+
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
             <div>
-              <label className="label" htmlFor="category">Category</label>
-              <input
-                id="category"
-                className="input"
-                value={form.category}
-                onChange={(e) => setForm({ ...form, category: e.target.value })}
+              <label className="label">
+                Category
+              </label>
+
+              <CategoryPicker
+                categories={categories}
+                value={selectedCategory?.id ?? null}
+                onChange={handleCategoryChange}
+                onCategoryCreated={(category) =>
+                  setCategories((previous) =>
+                    [...previous, category].sort((a, b) =>
+                      a.name.localeCompare(b.name)
+                    )
+                  )
+                }
               />
             </div>
+
             <div>
-              <label className="label" htmlFor="european_reference">European reference</label>
+              <label
+                className="label"
+                htmlFor="european_reference"
+              >
+                European reference
+              </label>
+
               <input
                 id="european_reference"
                 className="input"
                 value={form.european_reference}
-                onChange={(e) => setForm({ ...form, european_reference: e.target.value })}
+                onChange={(e) =>
+                  setForm({
+                    ...form,
+                    european_reference: e.target.value,
+                  })
+                }
               />
             </div>
           </div>
+
           <div>
-            <label className="label" htmlFor="description">Description</label>
+            <label
+              className="label"
+              htmlFor="description"
+            >
+              Description
+            </label>
+
             <textarea
               id="description"
               rows={4}
               className="input"
               value={form.description}
-              onChange={(e) => setForm({ ...form, description: e.target.value })}
+              onChange={(e) =>
+                setForm({
+                  ...form,
+                  description: e.target.value,
+                })
+              }
             />
           </div>
         </div>
 
+        <div className="card p-5">
+          <ProductImageManager
+            productId={id}
+            pendingFiles={pendingImages}
+            onPendingFilesChange={setPendingImages}
+          />
+        </div>
+
         <div className="card space-y-3 p-5">
-          <label className="label !mb-0">Suppliers</label>
+          <label className="label !mb-0">
+            Suppliers
+          </label>
+
           <SupplierPicker
             allSuppliers={allSuppliers}
             links={links}
             onChange={setLinks}
-            onSupplierCreated={(s) => setAllSuppliers((prev) => [...prev, s])}
+            onSupplierCreated={(supplier) =>
+              setAllSuppliers((previous) => [
+                ...previous,
+                supplier,
+              ])
+            }
           />
         </div>
 
         <div className="flex gap-2">
-          <button type="submit" disabled={saving} className="btn-primary">
-            {saving ? "Saving…" : isEdit ? "Save changes" : "Create product"}
+          <button
+            type="submit"
+            disabled={saving}
+            className="btn-primary"
+          >
+            {saving
+              ? "Saving…"
+              : isEdit
+              ? "Save changes"
+              : "Create product"}
           </button>
-          <button type="button" onClick={() => navigate(-1)} className="btn-secondary">
+
+          <button
+            type="button"
+            onClick={() => navigate(-1)}
+            className="btn-secondary"
+          >
             Cancel
           </button>
         </div>
