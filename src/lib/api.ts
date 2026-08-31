@@ -72,7 +72,7 @@ export async function fetchProducts(
     const term = filters.search.trim();
 
     query = query.or(
-      `product_name.ilike.%${term}%,sample_id.ilike.%${term}%,european_reference.ilike.%${term}%`
+      `product_name.ilike.%${term}%,sample_id.ilike.%${term}%,architect_name.ilike.%${term}%`
     );
   }
 
@@ -153,14 +153,11 @@ export async function fetchProductById(
 
 export interface ProductInput {
   product_name: string;
-
   // Keep this because the existing application/database uses it.
   category: string;
-
   // New normalized category.
   category_id?: string | null;
-
-  european_reference: string;
+  architect_name: string;
   description: string;
 }
 

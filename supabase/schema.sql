@@ -49,7 +49,7 @@ create table products (
     sample_id text unique not null default generate_sample_id(),
     product_name text not null,
     category text,
-    european_reference text,
+    architect_name text,
     description text,
     qr_image_url text,
     qr_target_url text,

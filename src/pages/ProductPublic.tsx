@@ -149,14 +149,14 @@ export function ProductPublic() {
               </div>
             )}
 
-            {product.european_reference && (
+            {product.architect_name && (
               <div>
                 <p className="label">
-                  European reference
+                  Location Product
                 </p>
 
                 <p className="text-sm text-ink dark:text-paper">
-                  {product.european_reference}
+                  {product.architect_name}
                 </p>
               </div>
             )}

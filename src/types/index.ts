@@ -49,7 +49,7 @@ export interface Product {
   // New category relation.
   category_id: string | null;
 
-  european_reference: string | null;
+  architect_name: string | null;
   description: string | null;
   qr_image_url: string | null;
   qr_target_url: string | null;

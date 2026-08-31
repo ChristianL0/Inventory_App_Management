@@ -22,7 +22,7 @@ const emptyForm = {
   product_name: "",
   category: "",
   category_id: null as string | null,
-  european_reference: "",
+  architect_name: "",
   description: "",
 };
 
@@ -79,7 +79,7 @@ export function ProductForm() {
           product_name: product.product_name,
           category: product.category ?? "",
           category_id: product.category_id ?? null,
-          european_reference: product.european_reference ?? "",
+          architect_name: product.architect_name ?? "",
           description: product.description ?? "",
         });
 
@@ -147,7 +147,7 @@ export function ProductForm() {
         product_name: form.product_name.trim(),
         category: form.category.trim(),
         category_id: form.category_id,
-        european_reference: form.european_reference.trim(),
+        architect_name: form.architect_name.trim(),
         description: form.description.trim(),
       };
 
@@ -287,19 +287,19 @@ export function ProductForm() {
             <div>
               <label
                 className="label"
-                htmlFor="european_reference"
+                htmlFor="architect_name"
               >
-                European reference
+                Location Product
               </label>
 
               <input
-                id="european_reference"
+                id="architect_name"
                 className="input"
-                value={form.european_reference}
+                value={form.architect_name}
                 onChange={(e) =>
                   setForm({
                     ...form,
-                    european_reference: e.target.value,
+                    architect_name: e.target.value,
                   })
                 }
               />

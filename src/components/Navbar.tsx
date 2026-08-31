@@ -26,7 +26,7 @@ export function Navbar() {
           <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-signal-500 text-white">
             <Boxes size={16} />
           </span>
-          <span className="hidden sm:inline tracking-tight">Sample Tracker</span>
+          <span className="hidden sm:inline tracking-tight">Sample Tracker - Iulius</span>
         </Link>
 
         <nav className="flex flex-1 items-center gap-1">
