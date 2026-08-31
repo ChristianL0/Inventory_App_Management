@@ -343,6 +343,14 @@ export async function createCategory(input: {
 
   return data as Category;
 }
+export async function deleteCategory(id: string): Promise<void> {
+  const { error } = await supabase
+    .from("categories")
+    .update({ status: "inactive" })
+    .eq("id", id);
+
+  if (error) throw error;
+}
 
 export async function fetchDistinctCategories(): Promise<string[]> {
   const { data, error } = await supabase
