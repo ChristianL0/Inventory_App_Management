@@ -23,7 +23,9 @@ export function Navbar() {
     <header className="sticky top-0 z-40 border-b border-ink/8 dark:border-paper/10 bg-paper/90 dark:bg-ink/90 backdrop-blur">
       <div className="mx-auto flex h-14 max-w-7xl items-center gap-6 px-4 sm:px-6">
         <Link to="/" className="flex items-center gap-2 font-bold text-ink dark:text-paper">
+          <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-orange-500 text-white">
             <img src="/logo_iulius.png" alt="Logo" className="h-full w-full object-contain" />
+          </span>
           <span className="hidden sm:inline tracking-tight">Sample Tracker - Iulius</span>
         </Link>
 
