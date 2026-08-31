@@ -1,11 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import {
-  Boxes,
-  ChevronLeft,
-  ChevronRight,
-  QrCode,
-} from "lucide-react";
+import { ChevronLeft, ChevronRight, QrCode } from "lucide-react";
 import { fetchProductBySampleId } from "@/lib/api";
 import type { ProductWithSuppliers } from "@/types";
 import { PageSpinner } from "@/components/ui/Spinner";
@@ -36,13 +31,19 @@ export function ProductPublic() {
   const images = product?.product_images ?? [];
   const currentImage = images[selectedImage];
 
+  // architect_name holds the architect's name while the sample is checked
+  // out to them; empty/null means it's still in deposit (default state).
+  const isAtArchitect = Boolean(product?.architect_name);
+
   return (
     <div className="min-h-screen bg-paper dark:bg-ink">
       <header className="border-b border-ink/8 py-4 dark:border-paper/10">
         <div className="mx-auto flex max-w-2xl items-center gap-2 px-4 font-bold text-ink dark:text-paper">
-          <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-signal-500 text-white">
-            <Boxes size={16} />
-          </span>
+          <img
+            src="/logo.png"
+            alt="Company logo"
+            className="h-7 w-7 rounded-lg object-contain"
+          />
 
           Sample Tracker
         </div>
@@ -58,19 +59,31 @@ export function ProductPublic() {
         ) : (
           <div className="card space-y-5 p-6">
             <div>
-              <span className="id-tag">
-                {product.sample_id}
+              <span
+                className={`badge ${
+                  isAtArchitect
+                    ? "bg-violet-50 text-violet-700 dark:bg-violet-500/15 dark:text-violet-300"
+                    : "bg-green-50 text-green-700 dark:bg-green-500/15 dark:text-green-300"
+                }`}
+              >
+                {isAtArchitect ? "At the Architect" : "In Deposit"}
               </span>
 
-              <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink dark:text-paper">
-                {product.product_name}
-              </h1>
-
-              {product.category && (
-                <span className="badge mt-1 bg-tag-50 text-tag-600 dark:bg-tag-500/15 dark:text-tag-300">
-                  {product.category}
+              <div className="mt-3">
+                <span className="id-tag">
+                  {product.sample_id}
                 </span>
-              )}
+
+                <h1 className="mt-2 text-2xl font-bold tracking-tight text-ink dark:text-paper">
+                  {product.product_name}
+                </h1>
+
+                {product.category && (
+                  <span className="badge mt-1 bg-tag-50 text-tag-600 dark:bg-tag-500/15 dark:text-tag-300">
+                    {product.category}
+                  </span>
+                )}
+              </div>
             </div>
 
             {images.length > 0 && currentImage?.public_url && (
@@ -151,9 +164,7 @@ export function ProductPublic() {
 
             {product.architect_name && (
               <div>
-                <p className="label">
-                  Location Product
-                </p>
+                <p className="label">Location Product</p>
 
                 <p className="text-sm text-ink dark:text-paper">
                   {product.architect_name}
@@ -170,31 +181,6 @@ export function ProductPublic() {
                 </p>
               </div>
             )}
-
-            <div>
-              <p className="label">Suppliers</p>
-
-              {product.product_suppliers?.length ? (
-                <ul className="space-y-1.5">
-                  {product.product_suppliers.map((ps) => (
-                    <li
-                      key={ps.id}
-                      className="text-sm text-ink/85 dark:text-paper/85"
-                    >
-                      {ps.supplier?.company_name}
-
-                      {ps.supplier?.country
-                        ? ` — ${ps.supplier.country}`
-                        : ""}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className="text-sm text-ink/45 dark:text-paper/45">
-                  No suppliers listed.
-                </p>
-              )}
-            </div>
 
             {product.qr_generated_at && (
               <p className="text-xs text-ink/40 dark:text-paper/40">
