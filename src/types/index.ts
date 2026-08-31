@@ -42,13 +42,9 @@ export interface Product {
   id: string;
   sample_id: string;
   product_name: string;
-
-  // Legacy field. Kept for backward compatibility.
-  category: string | null;
-
-  // New category relation.
+  //legacy fields for backward compatibility
+  category: string | null; //ss
   category_id: string | null;
-
   architect_name: string | null;
   description: string | null;
   qr_image_url: string | null;
@@ -83,3 +79,4 @@ export interface DashboardStats {
   suppliersCount: number;
   qrGeneratedCount: number;
 }
+export type LocationStatus = "in_deposit" | "at_architect";
