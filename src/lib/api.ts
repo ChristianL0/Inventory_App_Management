@@ -199,6 +199,12 @@ export async function createProduct(
   return product as Product;
 }
 
+export async function updateSupplier(id: string, input: SupplierInput): Promise<Supplier> {
+  const { data, error } = await supabase.from("suppliers").update(input).eq("id", id).select().single();
+  if (error) throw error;
+  return data as Supplier;
+}
+
 export async function updateProduct(
   id: string,
   input: ProductInput,

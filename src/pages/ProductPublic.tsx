@@ -40,12 +40,12 @@ export function ProductPublic() {
       <header className="border-b border-ink/8 py-4 dark:border-paper/10">
         <div className="mx-auto flex max-w-2xl items-center gap-2 px-4 font-bold text-ink dark:text-paper">
           <img
-            src="/logo.png"
+            src="/logo_iulius.png"
             alt="Company logo"
             className="h-7 w-7 rounded-lg object-contain"
           />
 
-          Sample Tracker
+          Sample Tracker - Iulius
         </div>
       </header>
 
@@ -66,7 +66,7 @@ export function ProductPublic() {
                     : "bg-green-50 text-green-700 dark:bg-green-500/15 dark:text-green-300"
                 }`}
               >
-                {isAtArchitect ? "At the Architect" : "In Deposit"}
+                {isAtArchitect ? "At the Employee" : "In Deposit"}
               </span>
 
               <div className="mt-3">
@@ -164,7 +164,7 @@ export function ProductPublic() {
 
             {product.architect_name && (
               <div>
-                <p className="label">Location Product</p>
+                <p className="label">Employee Name</p>
 
                 <p className="text-sm text-ink dark:text-paper">
                   {product.architect_name}
