@@ -161,15 +161,21 @@ export function SupplierPicker({ allSuppliers, links, onChange, onSupplierCreate
                     className="input text-xs"
                     placeholder="Price"
                     type="number"
+                    min="0"
+                    step="0.01"
                     value={link.price_quoted ?? ""}
                     onChange={(e) =>
-                      updateLink(link.supplier_id, { price_quoted: e.target.value ? Number(e.target.value) : null })
+                    const raw = e.target.value;
+                    const val = raw === "" ? null : Math.max(0, Number(raw));
+                    updateLink(link.supplier_id, { price_quoted: val });
                     }
                   />
                   <input
                     className="input text-xs"
                     placeholder="MOQ"
                     type="number"
+                    min="0"
+                    step="1"
                     value={link.moq ?? ""}
                     onChange={(e) => updateLink(link.supplier_id, { moq: e.target.value ? Number(e.target.value) : null })}
                   />
@@ -177,6 +183,8 @@ export function SupplierPicker({ allSuppliers, links, onChange, onSupplierCreate
                     className="input text-xs"
                     placeholder="Lead time (days)"
                     type="number"
+                    min="0"
+                    step="1"
                     value={link.lead_time_days ?? ""}
                     onChange={(e) =>
                       updateLink(link.supplier_id, { lead_time_days: e.target.value ? Number(e.target.value) : null })
