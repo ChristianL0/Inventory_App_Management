@@ -312,7 +312,6 @@ export async function fetchAllCategories(): Promise<Category[]> {
   const { data, error } = await supabase
     .from("categories")
     .select("*")
-    .eq("status", "active")
     .order("name");
 
   if (error) throw error;
@@ -344,9 +343,24 @@ export async function createCategory(input: {
   return data as Category;
 }
 export async function deleteCategory(id: string): Promise<void> {
+  const { count, error: checkError } = await supabase
+    .from("products")
+    .select("id", { count: "exact", head: true })
+    .eq("category_id", id);
+
+  if (checkError) throw checkError;
+
+  if ((count ?? 0) > 0) {
+    throw new Error(
+      `This category is currently used by ${count} product${
+        count === 1 ? "" : "s"
+      } and cannot be deleted.`
+    );
+  }
+
   const { error } = await supabase
     .from("categories")
-    .update({ status: "inactive" })
+    .delete()
     .eq("id", id);
 
   if (error) throw error;

@@ -281,6 +281,13 @@ export function ProductForm() {
                     )
                   )
                 }
+                onCategoryDeleted={(categoryId) =>
+                   setCategories((previous) =>
+                      previous.filter(
+                      (category) => category.id !== categoryId
+                     )
+                    )
+                   }
               />
             </div>
 
