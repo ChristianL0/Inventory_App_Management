@@ -157,19 +157,22 @@ export function SupplierPicker({ allSuppliers, links, onChange, onSupplierCreate
                     value={link.supplier_part_number ?? ""}
                     onChange={(e) => updateLink(link.supplier_id, { supplier_part_number: e.target.value })}
                   />
-                  <input
-                    className="input text-xs"
-                    placeholder="Price"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    value={link.price_quoted ?? ""}
-                    onChange={(e) =>
-                    const raw = e.target.value;
-                    const val = raw === "" ? null : Math.max(0, Number(raw));
-                    updateLink(link.supplier_id, { price_quoted: val });
-                    }
-                  />
+<input
+  className="input text-xs"
+  placeholder="Price"
+  type="number"
+  min="0"
+  step="0.01"
+  value={link.price_quoted ?? ""}
+  onChange={(e) =>
+    updateLink(link.supplier_id, {
+      price_quoted: e.target.value
+        ? Number(e.target.value)
+        : null,
+    })
+  }
+/>
+                  
                   <input
                     className="input text-xs"
                     placeholder="MOQ"
