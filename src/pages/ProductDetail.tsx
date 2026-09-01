@@ -13,6 +13,8 @@ import { QRCodeCard } from "@/components/QRCodeCard";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/contexts/ToastContext";
+import { DocumentsField } from "@/components/DocumentsField";
+import { ProductDocuments } from "@/components/ProductDocuments";
 
 export function ProductDetail() {
   const { id } = useParams();
@@ -297,6 +299,11 @@ export function ProductDetail() {
               </p>
             )}
           </div>
+          <div>
+  <p className="label">Documents</p>
+
+  <ProductDocuments productId={product.id} />
+</div>
         </div>
 
         <QRCodeCard

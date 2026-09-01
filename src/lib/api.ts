@@ -3,6 +3,7 @@ import type {
   Category,
   DashboardStats,
   Product,
+  ProductDocuments,
   ProductImage,
   ProductWithSuppliers,
   Supplier,
@@ -554,4 +555,106 @@ export async function generateQrForProduct(
   if (error) throw error;
 
   return data as { qr_image_url: string };
+}
+
+/* ============================================================
+    Public Documents available
+   ============================================================ */
+
+  export interface ProductDocument {
+  id: string;
+  product_id: string;
+  file_name: string;
+  storage_path: string;
+  uploaded_at: string;
+}
+
+export interface ProductDocumentWithUrl extends ProductDocument {
+  signedUrl: string;
+}
+
+export async function fetchProductDocuments(
+  productId: string
+): Promise<ProductDocumentWithUrl[]> {
+  const { data, error } = await supabase
+    .from("product_documents")
+    .select("*")
+    .eq("product_id", productId)
+    .order("uploaded_at", { ascending: false });
+
+  if (error) throw error;
+
+  return Promise.all(
+    (data as ProductDocument[]).map(async (doc) => {
+      const { data: signed, error: signError } =
+        await supabase.storage
+          .from("product-documents")
+          .createSignedUrl(doc.storage_path, 600);
+
+      if (signError) throw signError;
+
+      return {
+        ...doc,
+        signedUrl: signed.signedUrl,
+      };
+    })
+  );
+}
+
+export async function uploadProductDocument(
+  productId: string,
+  file: File
+): Promise<ProductDocument> {
+  const storagePath =
+    `${productId}/${crypto.randomUUID()}-${file.name.replace(
+      /[^a-zA-Z0-9.\-_]/g,
+      "_"
+    )}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("product-documents")
+    .upload(storagePath, file, {
+      contentType: file.type || undefined,
+      upsert: false,
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { data, error } = await supabase
+    .from("product_documents")
+    .insert({
+      product_id: productId,
+      file_name: file.name,
+      storage_path: storagePath,
+    })
+    .select()
+    .single();
+
+  if (error) {
+    // Clean up the uploaded file if the database insert fails.
+    await supabase.storage
+      .from("product-documents")
+      .remove([storagePath]);
+
+    throw error;
+  }
+
+  return data as ProductDocument;
+}
+
+export async function deleteProductDocument(
+  doc: ProductDocument
+): Promise<void> {
+  const { error: storageError } = await supabase.storage
+    .from("product-documents")
+    .remove([doc.storage_path]);
+
+  if (storageError) throw storageError;
+
+  const { error } = await supabase
+    .from("product_documents")
+    .delete()
+    .eq("id", doc.id);
+
+  if (error) throw error;
 }

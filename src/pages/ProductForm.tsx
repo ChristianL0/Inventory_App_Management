@@ -13,10 +13,12 @@ import {
 } from "@/lib/api";
 import type { Category, Supplier } from "@/types";
 import { SupplierPicker } from "@/components/SupplierPicker";
+import { DocumentsField } from "@/components/DocumentsField";
 import { CategoryPicker } from "@/components/CategoryPicker";
 import { ProductImageManager } from "@/components/ProductImageManager";
 import { PageSpinner } from "@/components/ui/Spinner";
 import { useToast } from "@/contexts/ToastContext";
+import {ProductDetail} from "@/pages/ProductDetail";
 
 const emptyForm = {
   product_name: "",
@@ -343,6 +345,26 @@ export function ProductForm() {
             onPendingFilesChange={setPendingImages}
           />
         </div>
+
+        {isEdit && id && (
+  <div className="card space-y-3 p-5">
+    <div>
+      <h2 className="text-sm font-semibold text-ink dark:text-paper">
+        Documents
+      </h2>
+
+      <p className="text-xs text-ink/45 dark:text-paper/45">
+        Documents are private and are only available after
+        the special access code is entered.
+      </p>
+    </div>
+
+    <DocumentsField
+  productId={id}
+  isAdmin={true}
+/>
+  </div>
+)}
 
         <div className="card space-y-3 p-5">
           <label className="label !mb-0">

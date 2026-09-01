@@ -43,7 +43,7 @@ export interface Product {
   sample_id: string;
   product_name: string;
   //legacy fields for backward compatibility
-  category: string | null; //ss
+  category: string | null; //ss 
   category_id: string | null;
   architect_name: string | null;
   description: string | null;
@@ -80,3 +80,18 @@ export interface DashboardStats {
   qrGeneratedCount: number;
 }
 export type LocationStatus = "in_deposit" | "at_architect";
+
+export interface ProductDocuments {
+  id: string;
+  product_id: string;
+  file_name: string;
+  storage_path: string;
+  uploaded_at: string;
+  signedUrl?: string;
+}
+
+export interface ProductWithSuppliers extends Product {
+  product_suppliers: ProductSupplierLink[];
+  product_images?: ProductImage[];
+  product_documents?: ProductDocuments[];
+}

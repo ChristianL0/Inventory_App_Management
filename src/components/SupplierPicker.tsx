@@ -155,6 +155,8 @@ export function SupplierPicker({ allSuppliers, links, onChange, onSupplierCreate
                     className="input text-xs"
                     placeholder="Part number"
                     value={link.supplier_part_number ?? ""}
+                    min="0"
+                    step="1"
                     onChange={(e) => updateLink(link.supplier_id, { supplier_part_number: e.target.value })}
                   />
 <input
