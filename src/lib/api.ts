@@ -1,4 +1,5 @@
 import { supabase } from "@/lib/supabase";
+import { compressProductImage } from "@/lib/imageCompression";
 import type {
   Category,
   DashboardStats,
