@@ -658,3 +658,27 @@ export async function deleteProductDocument(
 
   if (error) throw error;
 }
+export async function unlockProductDetails(
+  sampleId: string,
+  password: string
+) {
+  const { data, error } = await supabase.functions.invoke(
+    "unlock-product-details",
+    {
+      body: {
+        sample_id: sampleId,
+        password,
+      },
+    }
+  );
+
+  if (error) {
+    throw error;
+  }
+
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+
+  return data;
+}

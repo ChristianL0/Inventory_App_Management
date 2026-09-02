@@ -9,6 +9,7 @@ import {
   generateQrForProduct,
   updateProduct,
   uploadProductImage,
+  uploadProductDocument,
   type SupplierLinkInput,
 } from "@/lib/api";
 import type { Category, Supplier } from "@/types";
@@ -43,9 +44,12 @@ export function ProductForm() {
   const [categories, setCategories] = useState<Category[]>([]);
 
   const [pendingImages, setPendingImages] = useState<File[]>([]);
+  const [pendingDocuments, setPendingDocuments] = useState<File[]>([]);
 
   const [loading, setLoading] = useState(isEdit);
   const [saving, setSaving] = useState(false);
+
+ 
 
   useEffect(() => {
     Promise.all([
@@ -172,6 +176,23 @@ export function ProductForm() {
           "success",
           `Product ${product.sample_id} created.`
         );
+        
+        if (pendingDocuments.length > 0) {
+  try {
+    await Promise.all(
+      pendingDocuments.map((file) =>
+        uploadProductDocument(product.id, file)
+      )
+    );
+
+    setPendingDocuments([]);
+  } catch {
+    notify(
+      "error",
+      "Product was created, but one or more documents could not be uploaded."
+    );
+  }
+}
 
         if (pendingImages.length > 0) {
           try {
@@ -345,26 +366,25 @@ export function ProductForm() {
             onPendingFilesChange={setPendingImages}
           />
         </div>
+<div className="card space-y-3 p-5">
+  <div>
+    <h2 className="text-sm font-semibold text-ink dark:text-paper">
+      Documents
+    </h2>
 
-        {isEdit && id && (
-  <div className="card space-y-3 p-5">
-    <div>
-      <h2 className="text-sm font-semibold text-ink dark:text-paper">
-        Documents
-      </h2>
-
-      <p className="text-xs text-ink/45 dark:text-paper/45">
-        Documents are private and are only available after
-        the special access code is entered.
-      </p>
-    </div>
-
-    <DocumentsField
-  productId={id}
-  isAdmin={true}
-/>
+    <p className="text-xs text-ink/45 dark:text-paper/45">
+      Add technical sheets, certificates, quotations, or other
+      documents associated with this sample.
+    </p>
   </div>
-)}
+
+  <DocumentsField
+    productId={id}
+    isAdmin={true}
+    pendingFiles={pendingDocuments}
+    onPendingFilesChange={setPendingDocuments}
+  />
+</div>
 
         <div className="card space-y-3 p-5">
           <label className="label !mb-0">
