@@ -1,4 +1,4 @@
-// supabase/functions/unlock-product-details/index.ts
+// supabase/functions/smooth-worker/index.ts
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const UNLOCK_PASSWORD = Deno.env.get("QR_UNLOCK_PASSWORD");
