@@ -1,10 +1,10 @@
 import { supabase } from "@/lib/supabase";
 import { compressProductImage } from "@/lib/imageCompression";
+
 import type {
   Category,
   DashboardStats,
   Product,
-  ProductDocuments,
   ProductImage,
   ProductWithSuppliers,
   Supplier,
@@ -48,6 +48,11 @@ export interface PagedResult<T> {
   count: number;
 }
 
+
+/* ============================================================
+   PRODUCTS
+   ============================================================ */
+
 export async function fetchProducts(
   filters: ProductFilters,
   page: number,
@@ -85,38 +90,47 @@ export async function fetchProducts(
 
   const { data, error, count } = await query;
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   let rows = (data ?? []) as unknown as ProductWithSuppliers[];
 
   if (filters.supplierId) {
-    rows = rows.filter((p) =>
-      p.product_suppliers?.some(
-        (ps) => ps.supplier_id === filters.supplierId
+    rows = rows.filter((product) =>
+      product.product_suppliers?.some(
+        (productSupplier) =>
+          productSupplier.supplier_id === filters.supplierId
       )
     );
   }
 
   if (filters.search) {
     const term = filters.search.trim().toLowerCase();
-    const alreadyMatched = new Set(rows.map((r) => r.id));
+
+    const alreadyMatched = new Set(
+      rows.map((row) => row.id)
+    );
 
     const { data: bySupplier } = await supabase
       .from("products")
       .select(PRODUCT_WITH_SUPPLIERS_SELECT)
       .order("created_at", { ascending: false });
 
-    (bySupplier as unknown as ProductWithSuppliers[] | null)?.forEach(
-      (p) => {
-        const matches = p.product_suppliers?.some((ps) =>
-          ps.supplier?.company_name?.toLowerCase().includes(term)
-        );
+    (
+      bySupplier as unknown as ProductWithSuppliers[] | null
+    )?.forEach((product) => {
+      const matches = product.product_suppliers?.some(
+        (productSupplier) =>
+          productSupplier.supplier?.company_name
+            ?.toLowerCase()
+            .includes(term)
+      );
 
-        if (matches && !alreadyMatched.has(p.id)) {
-          rows.push(p);
-        }
+      if (matches && !alreadyMatched.has(product.id)) {
+        rows.push(product);
       }
-    );
+    });
   }
 
   return {
@@ -134,7 +148,9 @@ export async function fetchProductBySampleId(
     .eq("sample_id", sampleId)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data as unknown as ProductWithSuppliers | null;
 }
@@ -148,20 +164,36 @@ export async function fetchProductById(
     .eq("id", id)
     .maybeSingle();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data as unknown as ProductWithSuppliers | null;
 }
 
+
+/* ============================================================
+   PRODUCT INPUT
+   ============================================================ */
+
 export interface ProductInput {
   product_name: string;
+
   // Keep this because the existing application/database uses it.
   category: string;
-  // New normalized category.
+
+  // Normalized category.
   category_id?: string | null;
+
   architect_name: string;
+
   description: string;
 }
+
+
+/* ============================================================
+   SUPPLIER LINKS
+   ============================================================ */
 
 export interface SupplierLinkInput {
   supplier_id: string;
@@ -173,6 +205,11 @@ export interface SupplierLinkInput {
   notes?: string;
 }
 
+
+/* ============================================================
+   CREATE PRODUCT
+   ============================================================ */
+
 export async function createProduct(
   input: ProductInput,
   supplierLinks: SupplierLinkInput[]
@@ -183,7 +220,9 @@ export async function createProduct(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   if (supplierLinks.length > 0) {
     const rows = supplierLinks.map((link) => ({
@@ -195,17 +234,41 @@ export async function createProduct(
       .from("product_suppliers")
       .insert(rows);
 
-    if (linkError) throw linkError;
+    if (linkError) {
+      throw linkError;
+    }
   }
 
   return product as Product;
 }
 
-export async function updateSupplier(id: string, input: SupplierInput): Promise<Supplier> {
-  const { data, error } = await supabase.from("suppliers").update(input).eq("id", id).select().single();
-  if (error) throw error;
+
+/* ============================================================
+   UPDATE SUPPLIER
+   ============================================================ */
+
+export async function updateSupplier(
+  id: string,
+  input: SupplierInput
+): Promise<Supplier> {
+  const { data, error } = await supabase
+    .from("suppliers")
+    .update(input)
+    .eq("id", id)
+    .select()
+    .single();
+
+  if (error) {
+    throw error;
+  }
+
   return data as Supplier;
 }
+
+
+/* ============================================================
+   UPDATE PRODUCT
+   ============================================================ */
 
 export async function updateProduct(
   id: string,
@@ -217,14 +280,18 @@ export async function updateProduct(
     .update(input)
     .eq("id", id);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   const { error: deleteError } = await supabase
     .from("product_suppliers")
     .delete()
     .eq("product_id", id);
 
-  if (deleteError) throw deleteError;
+  if (deleteError) {
+    throw deleteError;
+  }
 
   if (supplierLinks.length > 0) {
     const rows = supplierLinks.map((link) => ({
@@ -236,38 +303,85 @@ export async function updateProduct(
       .from("product_suppliers")
       .insert(rows);
 
-    if (insertError) throw insertError;
+    if (insertError) {
+      throw insertError;
+    }
   }
 }
 
-export async function deleteProduct(id: string): Promise<void> {
-  // Remove files from Storage first.
+
+/* ============================================================
+   DELETE PRODUCT
+   ============================================================ */
+
+export async function deleteProduct(
+  id: string
+): Promise<void> {
+  // Remove product images from Storage first.
   const { data: images, error: imageError } = await supabase
     .from("product_images")
     .select("storage_path")
     .eq("product_id", id);
 
-  if (imageError) throw imageError;
+  if (imageError) {
+    throw imageError;
+  }
 
-  const paths = (images ?? [])
+  const imagePaths = (images ?? [])
     .map((image) => image.storage_path)
     .filter(Boolean);
 
-  if (paths.length > 0) {
+  if (imagePaths.length > 0) {
     const { error: storageError } = await supabase.storage
       .from("product-images")
-      .remove(paths);
+      .remove(imagePaths);
 
-    if (storageError) throw storageError;
+    if (storageError) {
+      throw storageError;
+    }
   }
 
+  // Remove product documents from Storage.
+  const { data: documents, error: documentError } =
+    await supabase
+      .from("product_documents")
+      .select("storage_path")
+      .eq("product_id", id);
+
+  if (documentError) {
+    throw documentError;
+  }
+
+  const documentPaths = (documents ?? [])
+    .map((document) => document.storage_path)
+    .filter(Boolean);
+
+  if (documentPaths.length > 0) {
+    const { error: documentStorageError } =
+      await supabase.storage
+        .from("product-documents")
+        .remove(documentPaths);
+
+    if (documentStorageError) {
+      throw documentStorageError;
+    }
+  }
+
+  // Delete the product itself.
   const { error } = await supabase
     .from("products")
     .delete()
     .eq("id", id);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 }
+
+
+/* ============================================================
+   SUPPLIERS
+   ============================================================ */
 
 export async function fetchAllSuppliers(): Promise<Supplier[]> {
   const { data, error } = await supabase
@@ -275,7 +389,9 @@ export async function fetchAllSuppliers(): Promise<Supplier[]> {
     .select("*")
     .order("company_name");
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data as Supplier[];
 }
@@ -300,7 +416,9 @@ export async function createSupplier(
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data as Supplier;
 }
@@ -316,7 +434,9 @@ export async function fetchAllCategories(): Promise<Category[]> {
     .select("*")
     .order("name");
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data as Category[];
 }
@@ -340,17 +460,27 @@ export async function createCategory(input: {
     .select()
     .single();
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data as Category;
 }
-export async function deleteCategory(id: string): Promise<void> {
+
+export async function deleteCategory(
+  id: string
+): Promise<void> {
   const { count, error: checkError } = await supabase
     .from("products")
-    .select("id", { count: "exact", head: true })
+    .select("id", {
+      count: "exact",
+      head: true,
+    })
     .eq("category_id", id);
 
-  if (checkError) throw checkError;
+  if (checkError) {
+    throw checkError;
+  }
 
   if ((count ?? 0) > 0) {
     throw new Error(
@@ -365,17 +495,23 @@ export async function deleteCategory(id: string): Promise<void> {
     .delete()
     .eq("id", id);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 }
 
-export async function fetchDistinctCategories(): Promise<string[]> {
+export async function fetchDistinctCategories(): Promise<
+  string[]
+> {
   const { data, error } = await supabase
     .from("categories")
     .select("name")
     .eq("status", "active")
     .order("name");
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return (data ?? [])
     .map((row) => row.name)
@@ -397,18 +533,30 @@ export async function fetchProductImages(
     .order("sort_order", { ascending: true })
     .order("created_at", { ascending: true });
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data as ProductImage[];
 }
+
+
+/* ============================================================
+   UPLOAD PRODUCT IMAGE
+   ============================================================ */
 
 export async function uploadProductImage(
   productId: string,
   file: File,
   sortOrder = 0
 ): Promise<ProductImage> {
-  const extension =
-    file.name.split(".").pop()?.toLowerCase() || "jpg";
+  // Compress the image before sending it to Supabase Storage.
+  const compressedFile = await compressProductImage(file, {
+    maxWidth: 2000,
+    maxHeight: 2000,
+    maxBytes: 3 * 1024 * 1024, // 3 MB
+    quality: 0.82,
+  });
 
   const safeName =
     file.name
@@ -416,19 +564,28 @@ export async function uploadProductImage(
       .replace(/[^a-zA-Z0-9-_]/g, "-")
       .slice(0, 80) || "image";
 
-  const uniqueName = `${Date.now()}-${crypto.randomUUID()}-${safeName}.${extension}`;
+  const uniqueName =
+    `${Date.now()}-${crypto.randomUUID()}-${safeName}.jpg`;
 
-  const storagePath = `${productId}/${uniqueName}`;
+  const storagePath =
+    `${productId}/${uniqueName}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from("product-images")
-    .upload(storagePath, file, {
-      cacheControl: "3600",
-      upsert: false,
-      contentType: file.type || undefined,
-    });
+  const { error: uploadError } =
+    await supabase.storage
+      .from("product-images")
+      .upload(
+        storagePath,
+        compressedFile,
+        {
+          cacheControl: "3600",
+          upsert: false,
+          contentType: "image/jpeg",
+        }
+      );
 
-  if (uploadError) throw uploadError;
+  if (uploadError) {
+    throw uploadError;
+  }
 
   const {
     data: { publicUrl },
@@ -442,6 +599,7 @@ export async function uploadProductImage(
       product_id: productId,
       storage_path: storagePath,
       public_url: publicUrl,
+      // Keep the original filename visible to the user.
       file_name: file.name,
       sort_order: sortOrder,
     })
@@ -449,6 +607,7 @@ export async function uploadProductImage(
     .single();
 
   if (error) {
+    // If the database insert fails, remove the uploaded file.
     await supabase.storage
       .from("product-images")
       .remove([storagePath]);
@@ -459,22 +618,37 @@ export async function uploadProductImage(
   return data as ProductImage;
 }
 
+
+/* ============================================================
+   DELETE PRODUCT IMAGE
+   ============================================================ */
+
 export async function deleteProductImage(
   image: ProductImage
 ): Promise<void> {
-  const { error: storageError } = await supabase.storage
-    .from("product-images")
-    .remove([image.storage_path]);
+  const { error: storageError } =
+    await supabase.storage
+      .from("product-images")
+      .remove([image.storage_path]);
 
-  if (storageError) throw storageError;
+  if (storageError) {
+    throw storageError;
+  }
 
   const { error } = await supabase
     .from("product_images")
     .delete()
     .eq("id", image.id);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 }
+
+
+/* ============================================================
+   UPDATE PRODUCT IMAGE ORDER
+   ============================================================ */
 
 export async function updateProductImageOrder(
   imageId: string,
@@ -482,10 +656,14 @@ export async function updateProductImageOrder(
 ): Promise<void> {
   const { error } = await supabase
     .from("product_images")
-    .update({ sort_order: sortOrder })
+    .update({
+      sort_order: sortOrder,
+    })
     .eq("id", imageId);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 }
 
 
@@ -502,15 +680,24 @@ export async function fetchDashboardStats(): Promise<DashboardStats> {
   ] = await Promise.all([
     supabase
       .from("products")
-      .select("*", { count: "exact", head: true }),
+      .select("*", {
+        count: "exact",
+        head: true,
+      }),
 
     supabase
       .from("suppliers")
-      .select("*", { count: "exact", head: true }),
+      .select("*", {
+        count: "exact",
+        head: true,
+      }),
 
     supabase
       .from("products")
-      .select("*", { count: "exact", head: true })
+      .select("*", {
+        count: "exact",
+        head: true,
+      })
       .not("qr_image_url", "is", null),
 
     fetchDistinctCategories(),
@@ -530,10 +717,14 @@ export async function fetchRecentProducts(
   const { data, error } = await supabase
     .from("products")
     .select(PRODUCT_WITH_SUPPLIERS_SELECT)
-    .order("created_at", { ascending: false })
+    .order("created_at", {
+      ascending: false,
+    })
     .limit(limit);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return data as unknown as ProductWithSuppliers[];
 }
@@ -546,23 +737,31 @@ export async function fetchRecentProducts(
 export async function generateQrForProduct(
   productId: string
 ): Promise<{ qr_image_url: string }> {
-  const { data, error } = await supabase.functions.invoke(
-    "generate-qr",
-    {
-      body: { product_id: productId },
-    }
-  );
+  const { data, error } =
+    await supabase.functions.invoke(
+      "generate-qr",
+      {
+        body: {
+          product_id: productId,
+        },
+      }
+    );
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
-  return data as { qr_image_url: string };
+  return data as {
+    qr_image_url: string;
+  };
 }
 
+
 /* ============================================================
-    Public Documents available
+   PRODUCT DOCUMENTS
    ============================================================ */
 
-  export interface ProductDocument {
+export interface ProductDocument {
   id: string;
   product_id: string;
   file_name: string;
@@ -570,9 +769,15 @@ export async function generateQrForProduct(
   uploaded_at: string;
 }
 
-export interface ProductDocumentWithUrl extends ProductDocument {
+export interface ProductDocumentWithUrl
+  extends ProductDocument {
   signedUrl: string;
 }
+
+
+/* ============================================================
+   FETCH PRODUCT DOCUMENTS
+   ============================================================ */
 
 export async function fetchProductDocuments(
   productId: string
@@ -581,18 +786,29 @@ export async function fetchProductDocuments(
     .from("product_documents")
     .select("*")
     .eq("product_id", productId)
-    .order("uploaded_at", { ascending: false });
+    .order("uploaded_at", {
+      ascending: false,
+    });
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 
   return Promise.all(
     (data as ProductDocument[]).map(async (doc) => {
-      const { data: signed, error: signError } =
-        await supabase.storage
-          .from("product-documents")
-          .createSignedUrl(doc.storage_path, 600);
+      const {
+        data: signed,
+        error: signError,
+      } = await supabase.storage
+        .from("product-documents")
+        .createSignedUrl(
+          doc.storage_path,
+          600
+        );
 
-      if (signError) throw signError;
+      if (signError) {
+        throw signError;
+      }
 
       return {
         ...doc,
@@ -602,37 +818,70 @@ export async function fetchProductDocuments(
   );
 }
 
+
+/* ============================================================
+   UPLOAD PRODUCT DOCUMENT
+   ============================================================ */
+
 export async function uploadProductDocument(
   productId: string,
   file: File
 ): Promise<ProductDocument> {
+  // Maximum document size:
+  // 5 MiB = 5 * 1024 * 1024 bytes.
+  const MAX_DOCUMENT_SIZE =
+    5 * 1024 * 1024;
+
+  // IMPORTANT:
+  // Check the size BEFORE sending anything to Supabase.
+  if (file.size > MAX_DOCUMENT_SIZE) {
+    throw new Error(
+      `File "${file.name}" is too large. Maximum allowed size is 5 MB.`
+    );
+  }
+
+  const safeName =
+    file.name
+      .replace(/[^a-zA-Z0-9._-]/g, "-")
+      .slice(0, 100) || "document";
+
   const storagePath =
-    `${productId}/${crypto.randomUUID()}-${file.name.replace(
-      /[^a-zA-Z0-9.\-_]/g,
-      "_"
-    )}`;
+    `${productId}/${crypto.randomUUID()}-${safeName}`;
 
-  const { error: uploadError } = await supabase.storage
+  const {
+    error: uploadError,
+  } = await supabase.storage
     .from("product-documents")
-    .upload(storagePath, file, {
-      contentType: file.type || undefined,
-      upsert: false,
-    });
+    .upload(
+      storagePath,
+      file,
+      {
+        cacheControl: "3600",
+        upsert: false,
+        contentType:
+          file.type ||
+          "application/octet-stream",
+      }
+    );
 
-  if (uploadError) throw uploadError;
+  if (uploadError) {
+    throw uploadError;
+  }
 
-  const { data, error } = await supabase
-    .from("product_documents")
-    .insert({
-      product_id: productId,
-      file_name: file.name,
-      storage_path: storagePath,
-    })
-    .select()
-    .single();
+  const { data, error } =
+    await supabase
+      .from("product_documents")
+      .insert({
+        product_id: productId,
+        file_name: file.name,
+        storage_path: storagePath,
+      })
+      .select()
+      .single();
 
   if (error) {
-    // Clean up the uploaded file if the database insert fails.
+    // Remove the uploaded file if the
+    // database insert fails.
     await supabase.storage
       .from("product-documents")
       .remove([storagePath]);
@@ -643,35 +892,53 @@ export async function uploadProductDocument(
   return data as ProductDocument;
 }
 
+
+/* ============================================================
+   DELETE PRODUCT DOCUMENT
+   ============================================================ */
+
 export async function deleteProductDocument(
   doc: ProductDocument
 ): Promise<void> {
-  const { error: storageError } = await supabase.storage
+  const {
+    error: storageError,
+  } = await supabase.storage
     .from("product-documents")
     .remove([doc.storage_path]);
 
-  if (storageError) throw storageError;
+  if (storageError) {
+    throw storageError;
+  }
 
   const { error } = await supabase
     .from("product_documents")
     .delete()
     .eq("id", doc.id);
 
-  if (error) throw error;
+  if (error) {
+    throw error;
+  }
 }
+
+
+/* ============================================================
+   UNLOCK PRODUCT DETAILS
+   ============================================================ */
+
 export async function unlockProductDetails(
   sampleId: string,
   password: string
 ) {
-  const { data, error } = await supabase.functions.invoke(
-    "smooth-worker",
-    {
-      body: {
-        sample_id: sampleId,
-        password,
-      },
-    }
-  );
+  const { data, error } =
+    await supabase.functions.invoke(
+      "smooth-worker",
+      {
+        body: {
+          sample_id: sampleId,
+          password,
+        },
+      }
+    );
 
   if (error) {
     throw error;
