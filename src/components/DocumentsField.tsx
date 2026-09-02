@@ -21,6 +21,8 @@ type DocumentsFieldProps = {
   onPendingFilesChange?: (files: File[]) => void;
 };
 
+const MAX_DOCUMENT_SIZE = 5 * 1024 * 1024; // 5 MB
+
 export function DocumentsField({
   productId,
   isAdmin,
@@ -63,13 +65,27 @@ export function DocumentsField({
 
     const files = Array.from(fileList);
 
-    /*
-     * NEW PRODUCT
-     *
-     * The product doesn't have an ID yet, so keep the
-     * selected files in ProductForm until the product
-     * has been created.
-     */
+    // Check file sizes before adding or uploading.
+    const oversizedFiles = files.filter(
+      (file) => file.size > MAX_DOCUMENT_SIZE
+    );
+
+    if (oversizedFiles.length > 0) {
+      const names = oversizedFiles
+        .map((file) => `"${file.name}"`)
+        .join(", ");
+
+      notify(
+        "error",
+        `${names} ${
+          oversizedFiles.length === 1 ? "is" : "are"
+        } too large. Maximum allowed size is 5 MB.`
+      );
+
+      return;
+    }
+
+    // New product: store files temporarily.
     if (!productId) {
       onPendingFilesChange?.([
         ...pendingFiles,
@@ -79,12 +95,7 @@ export function DocumentsField({
       return;
     }
 
-    /*
-     * EXISTING PRODUCT
-     *
-     * The product already has an ID, so upload directly
-     * to Supabase.
-     */
+    // Existing product: upload directly.
     setUploading(true);
 
     try {
@@ -116,7 +127,9 @@ export function DocumentsField({
   async function handleDelete(
     doc: (typeof docs)[number]
   ) {
-    if (!confirm(`Delete "${doc.file_name}"?`)) return;
+    if (!confirm(`Delete "${doc.file_name}"?`)) {
+      return;
+    }
 
     try {
       await deleteProductDocument(doc);
@@ -145,7 +158,6 @@ export function DocumentsField({
 
   return (
     <div className="space-y-3">
-
       {/* Existing documents */}
       {docs.length > 0 && (
         <div className="space-y-2">
@@ -190,7 +202,7 @@ export function DocumentsField({
         </div>
       )}
 
-      {/* Pending documents for a NEW product */}
+      {/* Pending documents for a new product */}
       {!productId && pendingFiles.length > 0 && (
         <div className="space-y-2">
           {pendingFiles.map((file, index) => (
@@ -251,9 +263,10 @@ export function DocumentsField({
           <input
             type="file"
             multiple
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
             className="hidden"
             onChange={(e) => {
-              handleUpload(e.target.files);
+              void handleUpload(e.target.files);
               e.target.value = "";
             }}
             disabled={uploading}
