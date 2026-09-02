@@ -244,7 +244,7 @@ export async function createProduct(
 
 
 /* ============================================================
-   UPDATE SUPPLIER
+   UPDATE SUPPLIER & DELETE SUPPLIER
    ============================================================ */
 
 export async function updateSupplier(
@@ -265,6 +265,40 @@ export async function updateSupplier(
   return data as Supplier;
 }
 
+export async function deleteSupplier(
+  id: string
+): Promise<void> {
+  // Check whether the supplier is currently linked
+  // to any products.
+  const { count, error: checkError } = await supabase
+    .from("product_suppliers")
+    .select("id", {
+      count: "exact",
+      head: true,
+    })
+    .eq("supplier_id", id);
+
+  if (checkError) {
+    throw checkError;
+  }
+
+  if ((count ?? 0) > 0) {
+    throw new Error(
+      `This supplier is currently linked to ${count} product${
+        count === 1 ? "" : "s"
+      } and cannot be deleted.`
+    );
+  }
+
+  const { error } = await supabase
+    .from("suppliers")
+    .delete()
+    .eq("id", id);
+
+  if (error) {
+    throw error;
+  }
+}
 
 /* ============================================================
    UPDATE PRODUCT
