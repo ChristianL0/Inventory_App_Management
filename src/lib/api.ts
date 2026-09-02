@@ -663,7 +663,7 @@ export async function unlockProductDetails(
   password: string
 ) {
   const { data, error } = await supabase.functions.invoke(
-    "unlock-product-details",
+    "smooth-worker",
     {
       body: {
         sample_id: sampleId,
