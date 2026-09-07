@@ -12,6 +12,7 @@ import { ProductDetail } from "@/pages/ProductDetail";
 import { ProductPublic } from "@/pages/ProductPublic";
 import { Suppliers } from "@/pages/Suppliers";
 import { NotFound } from "@/pages/NotFound";
+import Seo from "@/components/Seo";
 
 function AppShell({ children }: { children: React.ReactNode }) {
   return (
