@@ -161,7 +161,7 @@ export function SupplierPicker({ allSuppliers, links, onChange, onSupplierCreate
                   />
 <input
   className="input text-xs"
-  placeholder="Price"
+  placeholder="Price (USD)"
   type="number"
   min="0"
   step="0.01"
@@ -177,7 +177,7 @@ export function SupplierPicker({ allSuppliers, links, onChange, onSupplierCreate
                   
                   <input
                     className="input text-xs"
-                    placeholder="MOQ"
+                    placeholder="Quantity"
                     type="number"
                     min="0"
                     step="1"
