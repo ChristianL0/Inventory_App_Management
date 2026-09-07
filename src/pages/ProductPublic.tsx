@@ -446,51 +446,72 @@ export function ProductPublic() {
                     )}
                   </div>
 
-                  {/* DOCUMENTS */}
-                  <div>
-                    <h3 className="label">
-                      Documents
-                    </h3>
+{/* DOCUMENTS */}
+<div>
+  <h3 className="label">
+    Documents
+  </h3>
 
-                    {documents.length === 0 ? (
-                      <p className="text-sm text-ink/45 dark:text-paper/45">
-                        No documents attached.
-                      </p>
-                    ) : (
-                      <div className="space-y-2">
-                        {documents.map((doc) => (
-                          <a
-                            key={doc.id}
-                            href={doc.signed_url}
-                            target="_blank"
-                            rel="noreferrer"
-                            className="flex items-center gap-2 rounded-lg border border-ink/8 px-3 py-3 text-sm text-ink hover:bg-ink/5 dark:border-paper/10 dark:text-paper dark:hover:bg-paper/5"
-                          >
-                            <FileText
-                              size={17}
-                              className="shrink-0 text-ink/50 dark:text-paper/50"
-                            />
+  {documents.length === 0 ? (
+    <p className="text-sm text-ink/45 dark:text-paper/45">
+      No documents attached.
+    </p>
+  ) : (
+    <div className="space-y-2">
+      {documents.map((doc) => (
+        <button
+          key={doc.id}
+          type="button"
+          onClick={async () => {
+            try {
+              const response = await fetch(doc.signed_url, {
+                method: "HEAD",
+              });
 
-                            <span className="min-w-0 flex-1 truncate">
-                              {doc.file_name}
-                            </span>
+              if (!response.ok) {
+                notify(
+                  "error",
+                  "This document link has expired. Please refresh the page and enter the access code again."
+                );
+                return;
+              }
 
-                            <ExternalLink
-                              size={14}
-                              className="shrink-0 text-ink/40 dark:text-paper/40"
-                            />
-                          </a>
-                        ))}
-                      </div>
-                    )}
-                  </div>
+              window.open(
+                doc.signed_url,
+                "_blank",
+                "noopener,noreferrer"
+              );
+            } catch {
+              notify(
+                "error",
+                "This document link has expired. Please refresh the page and enter the access code again."
+              );
+            }
+          }}
+          className="flex w-full items-center gap-2 rounded-lg border border-ink/8 px-3 py-3 text-left text-sm text-ink hover:bg-ink/5 dark:border-paper/10 dark:text-paper dark:hover:bg-paper/5"
+        >
+          <FileText
+            size={17}
+            className="shrink-0 text-ink/50 dark:text-paper/50"
+          />
 
-                  <p className="text-xs text-ink/40 dark:text-paper/40">
-                    Document links are temporary and expire
-                    automatically.
-                  </p>
-                </div>
-              )}
+          <span className="min-w-0 flex-1 truncate">
+            {doc.file_name}
+          </span>
+
+          <ExternalLink
+            size={14}
+            className="shrink-0 text-ink/40 dark:text-paper/40"
+          />
+        </button>
+      ))}
+    </div>
+  )}
+
+  <p className="mt-3 text-xs text-ink/40 dark:text-paper/40">
+    Document links are temporary and expire automatically.
+  </p>
+</div>
             </div>
           </div>
         )}
