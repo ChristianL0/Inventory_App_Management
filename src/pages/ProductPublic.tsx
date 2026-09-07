@@ -50,9 +50,7 @@ export function ProductPublic() {
   const { notify } = useToast();
 
   const [product, setProduct] =
-    useState<ProductWithSuppliers | null | undefined>(
-      undefined
-    );
+    useState<ProductWithSuppliers | null | undefined>(undefined);
 
   const [selectedImage, setSelectedImage] = useState(0);
 
@@ -60,13 +58,9 @@ export function ProductPublic() {
   const [unlocking, setUnlocking] = useState(false);
   const [unlocked, setUnlocked] = useState(false);
 
-  const [documents, setDocuments] = useState<
-    UnlockedDocument[]
-  >([]);
+  const [documents, setDocuments] = useState<UnlockedDocument[]>([]);
 
-  const [suppliers, setSuppliers] = useState<
-    UnlockedSupplier[]
-  >([]);
+  const [suppliers, setSuppliers] = useState<UnlockedSupplier[]>([]);
 
   useEffect(() => {
     if (!sampleId) return;
@@ -110,6 +104,21 @@ export function ProductPublic() {
       );
     } finally {
       setUnlocking(false);
+    }
+  }
+
+  function handleDocumentClick(doc: UnlockedDocument) {
+    const opened = window.open(
+      doc.signed_url,
+      "_blank",
+      "noopener,noreferrer"
+    );
+
+    if (!opened) {
+      notify(
+        "error",
+        "The document could not be opened. Please allow pop-ups for this site."
+      );
     }
   }
 
@@ -446,73 +455,57 @@ export function ProductPublic() {
                     )}
                   </div>
 
-{/* DOCUMENTS */}
-<div>
-  <h3 className="label">
-    Documents
-  </h3>
+                  {/* DOCUMENTS */}
+                  <div>
+                    <h3 className="label">
+                      Documents
+                    </h3>
 
-  {documents.length === 0 ? (
-    <p className="text-sm text-ink/45 dark:text-paper/45">
-      No documents attached.
-    </p>
-  ) : (
-    <div className="space-y-2">
-      {documents.map((doc) => (
-        <button
-          key={doc.id}
-          type="button"
-          onClick={async () => {
-            try {
-              const response = await fetch(doc.signed_url, {
-                method: "HEAD",
-              });
+                    {documents.length === 0 ? (
+                      <p className="text-sm text-ink/45 dark:text-paper/45">
+                        No documents attached.
+                      </p>
+                    ) : (
+                      <div className="space-y-2">
+                        {documents.map((doc) => (
+                          <button
+                            key={doc.id}
+                            type="button"
+                            onClick={() =>
+                              handleDocumentClick(doc)
+                            }
+                            className="flex w-full items-center gap-2 rounded-lg border border-ink/8 px-3 py-3 text-left text-sm text-ink hover:bg-ink/5 dark:border-paper/10 dark:text-paper dark:hover:bg-paper/5"
+                          >
+                            <FileText
+                              size={17}
+                              className="shrink-0 text-ink/50 dark:text-paper/50"
+                            />
 
-              if (!response.ok) {
-                notify(
-                  "error",
-                  "This document link has expired. Please refresh the page and enter the access code again."
-                );
-                return;
-              }
+                            <span className="min-w-0 flex-1 truncate">
+                              {doc.file_name}
+                            </span>
 
-              window.open(
-                doc.signed_url,
-                "_blank",
-                "noopener,noreferrer"
-              );
-            } catch {
-              notify(
-                "error",
-                "This document link has expired. Please refresh the page and enter the access code again."
-              );
-            }
-          }}
-          className="flex w-full items-center gap-2 rounded-lg border border-ink/8 px-3 py-3 text-left text-sm text-ink hover:bg-ink/5 dark:border-paper/10 dark:text-paper dark:hover:bg-paper/5"
-        >
-          <FileText
-            size={17}
-            className="shrink-0 text-ink/50 dark:text-paper/50"
-          />
+                            <ExternalLink
+                              size={14}
+                              className="shrink-0 text-ink/40 dark:text-paper/40"
+                            />
+                          </button>
+                        ))}
+                      </div>
+                    )}
 
-          <span className="min-w-0 flex-1 truncate">
-            {doc.file_name}
-          </span>
+                    <p className="mt-3 text-xs text-ink/40 dark:text-paper/40">
+                      Document links are temporary and expire
+                      automatically. If a document has expired,
+                      refresh this page and enter the access code
+                      again.
+                    </p>
+                  </div>
 
-          <ExternalLink
-            size={14}
-            className="shrink-0 text-ink/40 dark:text-paper/40"
-          />
-        </button>
-      ))}
-    </div>
-  )}
-
-  <p className="mt-3 text-xs text-ink/40 dark:text-paper/40">
-    Document links are temporary and expire automatically.
-  </p>
-</div>
+                </div>
+              )}
             </div>
+
           </div>
         )}
       </main>
