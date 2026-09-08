@@ -271,13 +271,12 @@ export function ProductDetail() {
 
                       {ps.price_quoted != null && (
                         <span>
-                          Price (USD): {ps.price_quoted}{" "}
-                          $
+                          Price (USD): {ps.price_quoted}{" "}$
                         </span>
                       )}
 
                       {ps.moq != null && (
-                        <span>RFQ: {ps.moq}units</span>
+                        <span>RFQ: {ps.moq} units</span>
                       )}
 
                       {ps.lead_time_days != null && (

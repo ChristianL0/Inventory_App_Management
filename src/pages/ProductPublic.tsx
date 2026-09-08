@@ -421,7 +421,7 @@ export function ProductPublic() {
 
                             {link.supplier_part_number && (
                               <p className="mt-2 text-xs text-ink/60 dark:text-paper/60">
-                                Part number:{" "}
+                                Article Number #:{" "}
                                 {link.supplier_part_number}
                               </p>
                             )}
@@ -429,7 +429,7 @@ export function ProductPublic() {
                             {link.price_quoted !== null &&
                               link.price_quoted !== undefined && (
                                 <p className="text-xs text-ink/60 dark:text-paper/60">
-                                  Price:{" "}
+                                  Price (USD):{" "}$
                                   {link.price_quoted}{" "}
                                   {link.currency ?? ""}
                                 </p>
@@ -438,7 +438,7 @@ export function ProductPublic() {
                             {link.moq !== null &&
                               link.moq !== undefined && (
                                 <p className="text-xs text-ink/60 dark:text-paper/60">
-                                  MOQ: {link.moq}
+                                  RFQ: {link.moq} units
                                 </p>
                               )}
 
