@@ -429,9 +429,8 @@ export function ProductPublic() {
                             {link.price_quoted !== null &&
                               link.price_quoted !== undefined && (
                                 <p className="text-xs text-ink/60 dark:text-paper/60">
-                                  Price (USD):{" "}$
+                                  Price (USD):{" "}
                                   {link.price_quoted}{" "}
-                                  {link.currency ?? ""}
                                 </p>
                               )}
 
