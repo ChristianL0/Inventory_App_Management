@@ -26,7 +26,7 @@ export function Navbar() {
           <span className="flex h-11 w-11 items-center justify-center rounded-xl text-white">
             <img src="/logo_iulius.png" alt="Logo" className="h-full w-full object-contain" />
           </span>
-          <span className="hidden sm:inline tracking-tight">Sample Tracker - Iulius</span>
+          <span className="hidden sm:inline tracking-tight">Starck - Iulius</span>
         </Link>
 
         <nav className="flex flex-1 items-center gap-1">

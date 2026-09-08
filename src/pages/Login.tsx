@@ -31,7 +31,7 @@ export function Login() {
       <div className="w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center gap-2 text-center">
           <img src="/logo_iulius.png" alt="Logo" className="h-16 w-16 object-contain" />
-          <h1 className="text-xl font-bold text-ink dark:text-paper">Sample Tracker - Iulius</h1>
+          <h1 className="text-xl font-bold text-ink dark:text-paper">Starck - Iulius</h1>
           <p className="text-sm text-ink/55 dark:text-paper/55">Sign in to manage inventory</p>
         </div>
 
