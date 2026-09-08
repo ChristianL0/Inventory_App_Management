@@ -17,8 +17,7 @@ import Seo from "@/components/Seo";
 function AppShell({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-paper dark:bg-ink">
-      <Navbar />
-      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">{children}</main>
+      <Navbar />      <main className="mx-auto max-w-7xl px-4 py-6 sm:px-6">{children}</main>
     </div>
   );
 }
@@ -29,6 +28,7 @@ export default function App() {
       <ToastProvider>
         <BrowserRouter>
           <AuthProvider>
+            <Seo />
             <Routes>
               {/* Public — this is the route the printed QR code opens, no auth required */}
               <Route path="/product/:sampleId" element={<ProductPublic />} />
