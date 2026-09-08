@@ -271,7 +271,7 @@ export function ProductDetail() {
 
                       {ps.price_quoted != null && (
                         <span>
-                          Price (USD): {ps.price_quoted}{" "}$
+                          Price (USD): {ps.price_quoted}{" "}
                         </span>
                       )}
 
