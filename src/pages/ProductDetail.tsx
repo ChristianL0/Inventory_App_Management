@@ -265,19 +265,19 @@ export function ProductDetail() {
                     <div className="mt-1 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink/60 dark:text-paper/60">
                       {ps.supplier_part_number && (
                         <span>
-                          Part #: {ps.supplier_part_number}
+                          Article Number #: {ps.supplier_part_number}
                         </span>
                       )}
 
                       {ps.price_quoted != null && (
                         <span>
-                          Price: {ps.price_quoted}{" "}
+                          Price (USD): {ps.price_quoted}{" "}
                           {ps.currency}
                         </span>
                       )}
 
                       {ps.moq != null && (
-                        <span>MOQ: {ps.moq}</span>
+                        <span>RFQ: {ps.moq}units</span>
                       )}
 
                       {ps.lead_time_days != null && (
