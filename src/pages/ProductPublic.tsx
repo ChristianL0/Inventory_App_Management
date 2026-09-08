@@ -143,7 +143,7 @@ export function ProductPublic() {
             className="h-7 w-7 rounded-lg object-contain"
           />
 
-          Sample Tracker - Iulius
+          Starck - Iulius
         </div>
       </header>
 
